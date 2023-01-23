@@ -19,50 +19,27 @@ class Restaurant
   end
 
   def place_order(ordered_items, discount: 0)
-    order_price = 0
-    validate_discount(ordered_items, discount)
+    return 'Double discount is not allowed' if invalid_discount?(ordered_items, discount)
 
+    order_price = 0
     ordered_items.each do |ordered_item|
       item = select_item(ordered_item[:name])
-      validate_and_calculate_stock(item, ordered_item[:count])
-      order_price += calculate_item_price(item, ordered_item)
-    end
 
-    order_price *= (1 - discount)
+      return 'Items not available' if item.nil? || !item.in_stock?
+
+      order_price += item.sell(ordered_item[:count], ordered_item[:discount])
+    end
+    order_price * (1 - discount)
   end
 
   private
 
-  def validate_discount(ordered_items, discount)
-    raise DiscountError if discount.positive? && ordered_items.map { |i| i[:discount].to_f }.sum.positive?
+  def invalid_discount?(ordered_items, discount)
+    discount.positive? && ordered_items.map { |i| i[:discount].to_f }.sum.positive?
   end
 
   def select_item(name)
     items.select { |i| i.name == name }.first
-  end
-
-  def validate_and_calculate_stock(item, ordered_quantity)
-    raise StockError if item.nil? || item.stock.zero?
-
-    item.stock -= ordered_quantity
-  end
-
-  def calculate_item_price(item, ordered_item)
-    item.price * (1 - ordered_item[:discount].to_f) * ordered_item[:count]
-  end
-
-  # error class
-  class StockError < ArgumentError
-    def initialize(message = 'Items not available')
-      super
-    end
-  end
-
-  # error class
-  class DiscountError < ArgumentError
-    def initialize(message = 'Double discount is not allowed')
-      super
-    end
   end
 end
 
@@ -75,5 +52,14 @@ class Item
     @name = name
     @price = price
     @stock = stock
+  end
+
+  def in_stock?
+    @stock.positive?
+  end
+
+  def sell(ordered_quantity, discount)
+    @stock -= ordered_quantity
+    @price * (1 - discount.to_f) * ordered_quantity
   end
 end
