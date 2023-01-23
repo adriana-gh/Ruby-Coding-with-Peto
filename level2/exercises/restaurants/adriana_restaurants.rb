@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# class for Restaurants selling Items
 class Restaurant
   attr_reader :name, :items
 
@@ -16,7 +19,6 @@ class Restaurant
   end
 
   def place_order(ordered_items, discount: 0)
-
     order_price = 0
     validate_discount(ordered_items, discount)
 
@@ -27,13 +29,12 @@ class Restaurant
     end
 
     order_price *= (1 - discount)
-
   end
 
   private
 
   def validate_discount(ordered_items, discount)
-    raise DiscountError if discount > 0 && ordered_items.map{ |i| i[:discount].to_f }.sum > 0
+    raise DiscountError if discount.positive? && ordered_items.map { |i| i[:discount].to_f }.sum.positive?
   end
 
   def select_item(name)
@@ -41,7 +42,8 @@ class Restaurant
   end
 
   def validate_and_calculate_stock(item, ordered_quantity)
-    raise StockError if item.nil? || item.stock == 0
+    raise StockError if item.nil? || item.stock.zero?
+
     item.stock -= ordered_quantity
   end
 
@@ -49,20 +51,22 @@ class Restaurant
     item.price * (1 - ordered_item[:discount].to_f) * ordered_item[:count]
   end
 
+  # error class
   class StockError < ArgumentError
-    def initialize ( message = 'Items not available' )
+    def initialize(message = 'Items not available')
       super
     end
   end
 
+  # error class
   class DiscountError < ArgumentError
-    def initialize ( message = 'Double discount is not allowed' )
+    def initialize(message = 'Double discount is not allowed')
       super
     end
   end
-
 end
 
+# class for Restaurants ordered in the Restaurants
 class Item
   attr_reader :name, :price
   attr_accessor :stock
@@ -72,5 +76,4 @@ class Item
     @price = price
     @stock = stock
   end
-
 end
