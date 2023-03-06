@@ -15,8 +15,9 @@ class Restaurant
 
   def remove_item(item_name)
     @items.delete_if { |i| i.name == item_name }
-  end
+    end
 
+=begin
   def place_order(ordered_items, discount: 0)
     return 'Double discount is not allowed' if invalid_discount?(ordered_items, discount)
     return 'Items not available' if incomplete_stock?(ordered_items)
@@ -29,18 +30,23 @@ class Restaurant
     end
     order_price * (1 - discount)
   end
+=end
+  require 'pry'
+  def place_order(ordered_items, discount: 0)
+    return 'Double discount is not allowed' if invalid_discount?(ordered_items, discount)
+    return 'Items not available' unless ordered_items.all? {|oi| items.map(&:name).include?(oi[:name])}
+
+    reserved_items = reserve_items(ordered_items)
+    return 'Items not available' if incomplete_stock?(reserved_items)
+
+    reserved_items.each { _1.sell }
+    calculate_order_price(ordered_items, discount)
+  end
 
   private
 
-  def incomplete_stock?(ordered_items)
-    ordered_items.each do |ordered_item|
-      item = select_item_by_name(ordered_item[:name])
-      return true if item.nil?
-
-      item.reserve(ordered_item[:count])
-      return true if item.out_of_stock?
-    end
-    false
+  def incomplete_stock?(items)
+    items.any?(&:out_of_stock?)
   end
 
   def invalid_discount?(ordered_items, discount)
@@ -49,6 +55,14 @@ class Restaurant
 
   def select_item_by_name(name)
     items.find { |i| i.name == name }
+  end
+
+  def reserve_items(items)
+    items.map! do |item|
+      item = select_item_by_name(item[:name])
+      item.reserve(item[:quantity])
+      order_price += item.calculate_price(ordered_item[:discount])
+    end
   end
 end
 
@@ -81,3 +95,9 @@ class Item
     @reserved_items = 0
   end
 end
+
+restaurant = Restaurant.new('Owls place')
+item1 = Item.new('pizza', 10, 10)
+restaurant.add_items(item1)
+order_items = [ { name: 'burger', count: 1 } ]
+puts restaurant.place_order(order_items)
